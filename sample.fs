@@ -1,58 +1,174 @@
 open System
 open System.Management
 
+module Domain =
+    type DeviceInfo = {manufacturer: string; model: string; userName: string; systemType: string;}
+    type OsInfo = {name: string; version: string; arch: string; installDateTime: string;}
+    type NetworkInfo = {ipAddr: string list; macAddr: string;}
+    type DiskInfo = {deviceId: string; fileSystem: string; maxSize: uint64; freeSize: uint64;}
+    type UserInfo = {userName: string; userDomain: string;}
+    type HotFixInfo = {hotFixId: string; installDateTime: string;}
+    type ServiceInfo = {name: string; displayName: string; state: string; startMode: string;}
+    type AppInfo = {name: string; version: string; installDate: string;}
+
+module Repository =
+    open Domain
+
+    type DeviceInfoRepository =
+        abstract member getInfo: unit -> DeviceInfo list
+
+    type OsInfoRepository =
+        abstract member getInfo: unit -> OsInfo list
+
+    type NetworkInfoRepository =
+        abstract member getInfo: unit -> NetworkInfo list
+
+    type DiskInfoRepository =
+        abstract member getInfo: unit -> DiskInfo list
+
+    type UserInfoRepository =
+        abstract member getInfo: unit -> UserInfo list
+
+    type HotFixInfoRepository =
+        abstract member getInfo: unit -> HotFixInfo list
+
+    type ServiceInfoRepository =
+        abstract member getInfo: unit -> ServiceInfo list
+
+    type AppInfoRepository =
+        abstract member getInfo: unit -> AppInfo list
+
+module Adapter =
+    open Repository
+    open Domain
+
+    type WmiDeviceInfoRepository() =
+        interface DeviceInfoRepository with
+            member _.getInfo (): DeviceInfo list  = 
+                use searcher = new ManagementObjectSearcher("SELECT * FROM Win32_ComputerSystem")
+                searcher.Get()
+                |> Seq.cast<ManagementObject>
+                |> Seq.map(fun obj -> {
+                    manufacturer = obj.["Manufacturer"] :?> string
+                    model = obj.["Model"] :?> string
+                    userName = obj.["UserName"] :?> string
+                    systemType = obj.["SystemType"] :?> string
+                })
+                |> Seq.toList
+
+    type WmiOsInfoRepository() =
+        interface OsInfoRepository with
+            member _.getInfo (): OsInfo list = 
+                use searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem")
+                searcher.Get()
+                |> Seq.cast<ManagementObject>
+                |> Seq.map(fun obj -> {
+                    name = obj.["Caption"] :?> string
+                    version = obj.["Version"] :?> string
+                    arch = obj.["OSArchitecture"] :?> string
+                    installDateTime = obj.["InstallDate"] :?> string
+                })
+                |> Seq.toList
+
+    type WmiNetworkInfoRepository() =
+        interface NetworkInfoRepository with
+            member _.getInfo (): NetworkInfo list = 
+                use searcher = new ManagementObjectSearcher("SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled = TRUE")
+                searcher.Get()
+                |> Seq.cast<ManagementObject>
+                |> Seq.map(fun obj -> {
+                    ipAddr = obj.["IPAddress"] :?> string[] |> List.ofArray
+                    macAddr = obj.["MACAddress"] :?> string
+                })
+                |> Seq.toList
+
+    type WmiDiskInfoRepository() =
+        interface DiskInfoRepository with
+            member _.getInfo (): DiskInfo list = 
+                use searcher = new ManagementObjectSearcher("SELECT * FROM Win32_LogicalDisk WHERE DriveType = 3")
+                searcher.Get()
+                |> Seq.cast<ManagementObject>
+                |> Seq.map(fun obj -> {
+                    deviceId = obj.["DeviceID"] :?> string
+                    fileSystem = obj.["FileSystem"] :?> string
+                    maxSize = obj.["Size"] :?> uint64
+                    freeSize = obj.["FreeSpace"] :?> uint64
+                })
+                |> Seq.toList
+
+    type WmiUserInfoRepository() =
+        interface UserInfoRepository with
+            member _.getInfo (): UserInfo list = 
+                use searcher = new ManagementObjectSearcher("SELECT * FROM Win32_UserAccount")
+                searcher.Get()
+                |> Seq.cast<ManagementObject>
+                |> Seq.map(fun obj -> {
+                    userName = obj.["Name"] :?> string
+                    userDomain = obj.["Domain"] :?> string
+                })
+                |> Seq.toList
+
+    type WmiHotFixInfoRepository() =
+        interface HotFixInfoRepository with
+            member _.getInfo (): HotFixInfo list = 
+                use searcher = new ManagementObjectSearcher("SELECT * FROM Win32_QuickFixEngineering")
+                searcher.Get()
+                |> Seq.cast<ManagementObject>
+                |> Seq.map(fun obj -> {
+                    hotFixId = obj.["HotFixID"] :?> string
+                    installDateTime = obj.["InstalledOn"] :?> string
+                })
+                |> Seq.toList
+
+    type WmiServiceInfoRepository() =
+        interface ServiceInfoRepository with
+            member _.getInfo (): ServiceInfo list = 
+                use searcher = new ManagementObjectSearcher("SELECT * FROM Win32_Service")
+                searcher.Get()
+                |> Seq.cast<ManagementObject>
+                |> Seq.map(fun obj -> {
+                    name = obj.["Name"] :?> string
+                    displayName = obj.["DisplayName"] :?> string
+                    state = obj.["State"] :?> string
+                    startMode = obj.["StartMode"] :?> string
+                })
+                |> Seq.toList
+
+    type WmiAppInfoRepository() =
+        interface AppInfoRepository with
+            member _.getInfo (): AppInfo list = 
+                use searcher = new ManagementObjectSearcher("SELECT * FROM Win32_Product")
+                searcher.Get()
+                |> Seq.cast<ManagementObject>
+                |> Seq.map(fun obj -> {
+                    name = obj.["Name"] :?> string
+                    version = obj.["Version"] :?> string
+                    installDate = obj.["InstallDate"] :?> string
+                })
+                |> Seq.toList
+
+open Adapter
+open Repository
 
 [<EntryPoint>]
 let main args =
-    let computerSearch = new ManagementObjectSearcher("SELECT * FROM Win32_ComputerSystem")
-    for mo in computerSearch.Get() do
-        printfn "メーカー: %s" (mo.["Manufacturer"] |> string)
-        printfn "モデル: %s" (mo.["Model"] |> string)
-        printfn "ユーザー名: %s" (mo.["UserName"] |> string)
-        printfn "システムタイプ: %s" (mo.["SystemType"] |> string)
 
-    let osSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem")
-    for os in osSearcher.Get() do
-        printfn "OS名: %s" (os.["Caption"] |> string)
-        printfn "バージョン: %s" (os.["Version"] |> string)
-        printfn "アーキテクチャ: %s" (os.["OSArchitecture"] |> string)
-        printfn "インストール日時: %s" (os.["InstallDate"] |> string)
+    let deviceInfoRepo = WmiDeviceInfoRepository() :> DeviceInfoRepository
+    let osInfoRepo = WmiOsInfoRepository() :> OsInfoRepository
+    let networkInfoRepo = WmiNetworkInfoRepository() :> NetworkInfoRepository
+    let diskInfoRepo = WmiDiskInfoRepository() :> DiskInfoRepository
+    let userInfoRepo = WmiUserInfoRepository() :> UserInfoRepository
+    let hotFixInfoRepo = WmiHotFixInfoRepository() :> HotFixInfoRepository
+    let serviceInfoRepo = WmiServiceInfoRepository() :> ServiceInfoRepository
+    let appInfoRepo = WmiAppInfoRepository() :> AppInfoRepository
 
-    let networkSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled = TRUE")
-    for net in networkSearcher.Get() do
-        printfn "IPアドレス: %s" (net.["IPAddress"] |> string)
-        printfn "MACアドレス: %s" (net.["MACAddress"] |> string)
-        printfn "DHCP有効: %s" (net.["DHCPEnabled"] |> string)
-
-    let diskSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_LogicalDisk WHERE DriveType = 3")
-    for disk in diskSearcher.Get() do
-        printfn "ドライブ: %s" (disk.["DeviceID"] |> string)
-        printfn "ファイルシステム: %s" (disk.["FileSystem"] |> string)
-        printfn "総容量: %s バイト" (disk.["Size"] |> string)
-        printfn "空き容量: %s バイト" (disk.["FreeSpace"] |> string)
-
-    let driveSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_DiskDrive")
-    for drive in driveSearcher.Get() do
-        printfn "ディスクモデル: %s" (drive.["Model"] |> string)
-        printfn "インターフェース: %s" (drive.["InterfaceType"] |> string)
-        printfn "シリアル番号: %s" (drive.["SerialNumber"] |> string)
-
-    let userSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_UserAccount")
-    for user in userSearcher.Get() do
-        printfn "ユーザー名: %s" (user.["Name"] |> string)
-        printfn "ドメイン: %s" (user.["Domain"] |> string)
-
-    let FixSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_QuickFixEngineering")
-    for update in FixSearcher.Get() do
-        printfn "更新プログラム: %s" (update.["HotFixID"] |> string)
-        printfn "インストール日: %s" (update.["InstalledOn"] |> string)
-
-    let ServiceSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_Service")
-    for service in ServiceSearcher.Get() do
-        printfn "サービス名: %s" (service.["Name"] |> string)
-        printfn "表示名: %s" (service.["DisplayName"] |> string)
-        printfn "状態: %s" (service.["State"] |> string)
-        printfn "スタートアップの種類: %s" (service.["StartMode"] |> string)
-
+    deviceInfoRepo.getInfo() |> Console.WriteLine
+    osInfoRepo.getInfo() |> Console.WriteLine
+    networkInfoRepo.getInfo() |> Console.WriteLine
+    diskInfoRepo.getInfo() |> Console.WriteLine
+    userInfoRepo.getInfo() |> Console.WriteLine
+    hotFixInfoRepo.getInfo() |> Console.WriteLine
+    serviceInfoRepo.getInfo() |> Console.WriteLine
+    appInfoRepo.getInfo() |> Console.WriteLine
 
     0
