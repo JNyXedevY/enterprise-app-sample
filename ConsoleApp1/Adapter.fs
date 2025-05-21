@@ -1,44 +1,5 @@
-open System
-open System.Management
-
-module Domain =
-    type DeviceInfo = {manufacturer: string; model: string; userName: string; systemType: string;}
-    type OsInfo = {name: string; version: string; arch: string; installDateTime: string;}
-    type NetworkInfo = {ipAddr: string list; macAddr: string;}
-    type DiskInfo = {deviceId: string; fileSystem: string; maxSize: uint64; freeSize: uint64;}
-    type UserInfo = {userName: string; userDomain: string;}
-    type HotFixInfo = {hotFixId: string; installDateTime: string;}
-    type ServiceInfo = {name: string; displayName: string; state: string; startMode: string;}
-    type AppInfo = {name: string; version: string; installDate: string;}
-
-module Repository =
-    open Domain
-
-    type DeviceInfoRepository =
-        abstract member getInfo: unit -> DeviceInfo list
-
-    type OsInfoRepository =
-        abstract member getInfo: unit -> OsInfo list
-
-    type NetworkInfoRepository =
-        abstract member getInfo: unit -> NetworkInfo list
-
-    type DiskInfoRepository =
-        abstract member getInfo: unit -> DiskInfo list
-
-    type UserInfoRepository =
-        abstract member getInfo: unit -> UserInfo list
-
-    type HotFixInfoRepository =
-        abstract member getInfo: unit -> HotFixInfo list
-
-    type ServiceInfoRepository =
-        abstract member getInfo: unit -> ServiceInfo list
-
-    type AppInfoRepository =
-        abstract member getInfo: unit -> AppInfo list
-
-module Adapter =
+﻿module Adapter
+    open System.Management
     open Repository
     open Domain
 
@@ -147,28 +108,17 @@ module Adapter =
                 })
                 |> Seq.toList
 
-open Adapter
-open Repository
+    type WmiBatteriInfoRepository() =
+        interface BatteryInfoRepository with
+            member _.getInfo (): BatteryInfo list = 
+                use seacher = new ManagementObjectSearcher("SELECT * FROM Win32_Battery")
+                seacher.Get()
+                |> Seq.cast<ManagementObject>
+                |> Seq.map(fun obj -> {
+                    name = obj.["Name"] |> Option.ofObj |> Option.map(fun x -> x :?> string) |> Option.defaultValue "Uknown"
+                    status = obj.["Status"] |> Option.ofObj |> Option.map(fun x-> x :?> string) |> Option.defaultValue "Uknown"
+                    designCapacity = obj.["DesignCapacity"] |> Option.ofObj |> Option.map(fun x -> x :?> int64)
+                    fullChargeCapacity = obj.["FullChargeCapacity"] |> Option.ofObj |> Option.map(fun x-> x :?> int64)
+                })
+                |> Seq.toList
 
-[<EntryPoint>]
-let main args =
-
-    let deviceInfoRepo = WmiDeviceInfoRepository() :> DeviceInfoRepository
-    let osInfoRepo = WmiOsInfoRepository() :> OsInfoRepository
-    let networkInfoRepo = WmiNetworkInfoRepository() :> NetworkInfoRepository
-    let diskInfoRepo = WmiDiskInfoRepository() :> DiskInfoRepository
-    let userInfoRepo = WmiUserInfoRepository() :> UserInfoRepository
-    let hotFixInfoRepo = WmiHotFixInfoRepository() :> HotFixInfoRepository
-    let serviceInfoRepo = WmiServiceInfoRepository() :> ServiceInfoRepository
-    let appInfoRepo = WmiAppInfoRepository() :> AppInfoRepository
-
-    deviceInfoRepo.getInfo() |> Console.WriteLine
-    osInfoRepo.getInfo() |> Console.WriteLine
-    networkInfoRepo.getInfo() |> Console.WriteLine
-    diskInfoRepo.getInfo() |> Console.WriteLine
-    userInfoRepo.getInfo() |> Console.WriteLine
-    hotFixInfoRepo.getInfo() |> Console.WriteLine
-    serviceInfoRepo.getInfo() |> Console.WriteLine
-    appInfoRepo.getInfo() |> Console.WriteLine
-
-    0
