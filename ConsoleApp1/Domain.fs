@@ -1,4 +1,5 @@
 ﻿module Domain
+
     type DeviceInfo = {
         manufacturer: string
         model: string

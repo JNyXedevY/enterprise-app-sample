@@ -14,15 +14,16 @@ let main args =
     let serviceInfoRepo = WmiServiceInfoRepository() :> ServiceInfoRepository
     let appInfoRepo = WmiAppInfoRepository() :> AppInfoRepository
     let batteryInfoRepo = WmiBatteriInfoRepository() :> BatteryInfoRepository
+    let storageRepo = JsonStorageRepository() :> StorageRepository
 
-    deviceInfoRepo.getInfo() |> Console.WriteLine
-    osInfoRepo.getInfo() |> Console.WriteLine
-    networkInfoRepo.getInfo() |> Console.WriteLine
-    diskInfoRepo.getInfo() |> Console.WriteLine
-    userInfoRepo.getInfo() |> Console.WriteLine
-    hotFixInfoRepo.getInfo() |> Console.WriteLine
-    serviceInfoRepo.getInfo() |> Console.WriteLine
-    appInfoRepo.getInfo() |> Console.WriteLine
-    batteryInfoRepo.getInfo() |> Console.WriteLine
+    deviceInfoRepo.getInfo() |> storageRepo.saveDeviceInfoList
+    osInfoRepo.getInfo() |> storageRepo.saveOsInfoList
+    networkInfoRepo.getInfo() |> storageRepo.saveNetworkInfoList
+    diskInfoRepo.getInfo() |> storageRepo.saveDiskInfoList
+    userInfoRepo.getInfo() |> storageRepo.saveUserInfoList
+    batteryInfoRepo.getInfo() |> storageRepo.saveBatteryInfo
+    //appInfoRepo.getInfo() |> storageRepo.saveAppInfo
+    hotFixInfoRepo.getInfo() |> storageRepo.saveHotFixInfo
+    serviceInfoRepo.getInfo() |> storageRepo.saveServiceInfo
 
     0

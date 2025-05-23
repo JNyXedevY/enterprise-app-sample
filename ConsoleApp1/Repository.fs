@@ -28,3 +28,13 @@
     type BatteryInfoRepository =
         abstract member getInfo: unit -> BatteryInfo list
 
+    type StorageRepository =
+        abstract member saveDeviceInfoList: DeviceInfo list -> unit
+        abstract member saveOsInfoList: OsInfo list -> unit
+        abstract member saveNetworkInfoList: NetworkInfo list -> unit
+        abstract member saveDiskInfoList: DiskInfo list -> unit
+        abstract member saveUserInfoList: UserInfo list -> unit
+        abstract member saveHotFixInfo: HotFixInfo list -> unit
+        abstract member saveServiceInfo: ServiceInfo list -> unit
+        abstract member saveAppInfo: AppInfo list -> unit
+        abstract member saveBatteryInfo: BatteryInfo list -> unit

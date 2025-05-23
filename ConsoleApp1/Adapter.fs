@@ -1,5 +1,7 @@
 ﻿module Adapter
     open System.Management
+    open System.IO
+    open System.Text.Json
     open Repository
     open Domain
 
@@ -122,3 +124,32 @@
                 })
                 |> Seq.toList
 
+    type JsonStorageRepository() =
+        interface StorageRepository with
+            member _.saveDeviceInfoList (dataList: DeviceInfo list): unit = 
+                let jsonData = JsonSerializer.Serialize(dataList)
+                File.WriteAllText("deviceInfo.json",jsonData)
+            member _.saveOsInfoList (dataList: OsInfo list): unit = 
+                let jsonData = JsonSerializer.Serialize(dataList)
+                File.WriteAllText("osInfo.json",jsonData)
+            member _.saveNetworkInfoList (dataList: NetworkInfo list): unit = 
+                let jsonData = JsonSerializer.Serialize(dataList)
+                File.WriteAllText("networkInfo.json", jsonData)
+            member _.saveDiskInfoList (dataList: DiskInfo list): unit = 
+                let jsonData = JsonSerializer.Serialize(dataList)
+                File.WriteAllText("diskInfo.json", jsonData)
+            member _.saveUserInfoList (dataList: UserInfo list): unit = 
+                let jsonData = JsonSerializer.Serialize(dataList)
+                File.WriteAllText("userInfo.json", jsonData)
+            member _.saveHotFixInfo (dataList: HotFixInfo list): unit = 
+                let jsonData = JsonSerializer.Serialize(dataList)
+                File.WriteAllText("hotfixInfo.json", jsonData)
+            member _.saveServiceInfo (dataList: ServiceInfo list): unit = 
+                let jsonData = JsonSerializer.Serialize(dataList)
+                File.WriteAllText("serviceInfo.json", jsonData)
+            member _.saveAppInfo (dataList: AppInfo list): unit = 
+                let jsonData = JsonSerializer.Serialize(dataList)
+                File.WriteAllText("appInfo.json", jsonData)
+            member _.saveBatteryInfo (dataList: BatteryInfo list): unit = 
+                let jsonData = JsonSerializer.Serialize(dataList)
+                File.WriteAllText("batteryInfo.json", jsonData)
